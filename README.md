@@ -2,6 +2,14 @@
 
 > **Note:** This is an updated version of CecchinoDelleAste, adapted to work with the English version of the game. It is completely unrelated to Frosty's paid V2.
 
+
+## 🚀 Changelog V.2:
+* **New Features:** Added *Auto-Refresh*, *Max Bid*, and *Max Buyout* functions to maximize car discovery and avoid already-ended auctions.
+* **Performance:** Optimized overall performance; the tool is out-of-the-box significantly faster and more responsive than the previous version.
+* **Code & Customization:** Deep code cleanup and removal of hardcoded limits. You can now customize every parameter 100% to match your PC's hardware and network speed.
+* **User Interface (UI):** Rebuilt from scratch to offer a more detailed and comprehensive experience compared to V.1.
+* **Bugfixes:** Applied various structural improvements and resolved minor bugs.
+
 ## Main changes
 * **Added multi-resolution support.** (tested and working: 720p, 1080p, 2K and 4K)
 * **Added HDR support.**
