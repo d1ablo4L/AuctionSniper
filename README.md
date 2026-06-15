@@ -64,7 +64,7 @@ Monitors the Auction House for the car you set, buys it instantly as soon as it 
 
 # Download
 
-Download the latest version of **CecchinoDelleAste.zip** from the [Releases page](https://github.com/d1ablo4L/CecchinoDelleAste/releases) and extract it into any folder on your PC.
+Download the latest version of **AuctionSniper.zip** from the [Releases page](https://github.com/d1ablo4L/AuctionSniper/releases) and extract it into any folder on your PC.
 
 ---
 
@@ -119,7 +119,6 @@ Windows SmartScreen will show a warning because the exe is not digitally signed.
 | **F8** | Start / stop |
 | **F9** | Emergency stop |
 | **STOP** button | Same as F8 |
-| **⚙** on the overlay | Settings |
 | **✕** on the overlay | Close and exit |
 
 ---
