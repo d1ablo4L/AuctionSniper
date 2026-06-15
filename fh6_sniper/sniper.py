@@ -265,16 +265,9 @@ class Sniper:
                 self.sleeper(0.3)
                 s = self.io.screen()
                 continue
-            if s in (Screen.BUYOUT_SUCCESS, Screen.CLAIM_CAR):
+            if s in (Screen.BUYOUT_SUCCESS, Screen.CLAIM_CAR,
+                     Screen.AUCTION_OPTIONS):
                 self._press("enter")
-                unknown_streak = 0
-                s = self._await_settle(prev=s)
-                continue
-            if s == Screen.AUCTION_OPTIONS:
-                # Closed/sold/expired auction: this menu has no Buy Out,
-                # only View Seller / View Highest Bidder. Pressing enter here
-                # opens a gamercard and loops forever -> back out with esc.
-                self._press("esc")
                 unknown_streak = 0
                 s = self._await_settle(prev=s)
                 continue
