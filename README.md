@@ -25,7 +25,7 @@
 
 ---
 
-# CecchinoDelleAste for FH6
+# AuctionSniper for FH6
 
 ## Automatic sniper for the Forza Horizon 6 Auction House
 
