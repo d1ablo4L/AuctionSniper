@@ -1,8 +1,11 @@
 from __future__ import annotations
+import logging
 from enum import Enum, auto
 from pathlib import Path
 import cv2
 import numpy as np
+
+_diag = logging.getLogger("fh6_matchdiag")
 
 
 class Screen(Enum):
@@ -37,6 +40,32 @@ TEMPLATE_SCREENS: dict[str, Screen] = {
 }
 
 
+SCREEN_THRESHOLD_KEYS: dict[Screen, str] = {
+    Screen.SEARCH_CONFIG:    "match_threshold_search",
+    Screen.RESULTS_HAS_CARS: "match_threshold_results",
+    Screen.RESULTS_EMPTY:    "match_threshold_results_empty",
+    Screen.AUCTION_OPTIONS:  "match_threshold_auction_options",
+    Screen.PLAYER_OPTIONS:   "match_threshold_player_options",
+    Screen.BUY_OUT:          "match_threshold_buy_out",
+    Screen.BUYOUT_PROGRESS:  "match_threshold_buyout_progress",
+    Screen.BUYOUT_SUCCESS:   "match_threshold_buyout_success",
+    Screen.BUYOUT_FAILED:    "match_threshold_buyout_failed",
+    Screen.CLAIM_CAR:        "match_threshold_claim_car",
+    Screen.AH_LANDING:       "match_threshold_ah_landing",
+}
+
+DEFAULT_MATCH_THRESHOLD = 0.80
+
+
+def thresholds_from_config(cfg) -> dict:
+    default = getattr(cfg, "match_threshold", DEFAULT_MATCH_THRESHOLD)
+    out = {}
+    for scr, key in SCREEN_THRESHOLD_KEYS.items():
+        v = getattr(cfg, key, None)
+        out[scr] = default if v is None else v
+    return out
+
+
 # ── Template matching ─────────────────────────────────────────────────────────
 def _gray(img: np.ndarray) -> np.ndarray:
     if img.ndim == 2:
@@ -65,18 +94,40 @@ def _small(tmpl: np.ndarray) -> np.ndarray:
     return cached
 
 
-def load_templates(template_dir) -> dict:
+def _resolve_template(primary_dir, name, fallback_dir):
+    p = Path(primary_dir) / name
+    if p.exists():
+        return p
+    if fallback_dir is not None:
+        fp = Path(fallback_dir) / name
+        if fp.exists():
+            logging.getLogger("fh6").warning(
+                "template '%s' not found in %s: using fallback %s",
+                name, primary_dir, fallback_dir)
+            return fp
+    return p
+
+
+def load_templates(template_dir, fallback_dir=None) -> dict:
+    _DOWNSCALED_TEMPLATES.clear()
     out = {}
     for name in TEMPLATE_SCREENS:
         if _has_bgoff_variant(name):
             continue
-        path = Path(template_dir) / name
+        path = _resolve_template(template_dir, name, fallback_dir)
         img = cv2.imread(str(path))
         if img is None:
-            raise FileNotFoundError(f"template mancante: {path}")
+            raise FileNotFoundError(f"template missing: {path}")
         gray = _gray(img)
         out[name] = gray
         _DOWNSCALED_TEMPLATES[id(gray)] = _downscale(gray)
+    global _SOLD_TEMPLATE, _SOLD_MASK
+    sold_path = _resolve_template(template_dir, SOLD_TEMPLATE_NAME, fallback_dir)
+    sold_img = cv2.imread(str(sold_path))
+    if sold_img is None:
+        raise FileNotFoundError(f"template missing: {sold_path}")
+    _SOLD_TEMPLATE = _gray(sold_img)
+    _SOLD_MASK = _sold_mask_from(sold_img)
     return out
 
 
@@ -141,15 +192,25 @@ def screen_scores(scene_bgr, templates: dict, targets=None) -> dict:
 
 
 def identify_screen(scene_bgr, templates: dict, threshold: float,
-                    targets=None) -> Screen:
+                    targets=None, thresholds=None) -> Screen:
     scores = screen_scores(scene_bgr, templates, targets=targets)
+
+    def _thr(name: str) -> float:
+        if thresholds:
+            return thresholds.get(TEMPLATE_SCREENS[name], threshold)
+        return threshold
+
     for name in _RESULTS_PRIORITY:
-        if scores.get(name, 0.0) >= threshold:
+        if scores.get(name, 0.0) >= _thr(name):
             return TEMPLATE_SCREENS[name]
-    best_screen, best_score = Screen.UNKNOWN, threshold
+    best_screen, best_margin, found = Screen.UNKNOWN, 0.0, False
     for name, score in scores.items():
-        if score >= best_score:
-            best_screen, best_score = TEMPLATE_SCREENS[name], score
+        t = _thr(name)
+        if score >= t:
+            margin = score - t
+            if not found or margin > best_margin:
+                best_screen, best_margin, found = (
+                    TEMPLATE_SCREENS[name], margin, True)
     return best_screen
 
 
@@ -169,14 +230,13 @@ def is_confirm_highlighted(scene_bgr, region=CONFIRM_ROW) -> bool:
     return int(cv2.countNonZero(bright)) > _CONFIRM_V_COUNT
 
 
-# ── SOLD stamp detection ──────────────────────────────────────────────────────
-SOLD_STAMP_REGION = (90, 185, 300, 295)
+# ── SOLD stamp detection (template matching) ──────────────────────────────────
+SOLD_TEMPLATE_NAME = "sold.png"
+_SOLD_MATCH_DEFAULT = 0.70
+_SOLD_TEMPLATE = None
+_SOLD_MASK = None
 
-_SOLD_H_LO = 24
-_SOLD_H_HI = 50
-_SOLD_S_THRESH = 100
-_SOLD_V_THRESH = 100
-_SOLD_PIXEL_COUNT = 700
+SOLD_STAMP_REGION = (90, 185, 300, 295)
 
 SOLD_STAMP_REGIONS = (
     SOLD_STAMP_REGION,
@@ -185,41 +245,105 @@ SOLD_STAMP_REGIONS = (
     (90, 791, 300, 901),
 )
 
-_SOLD_STRIP = (90, 185, 300, 901)
+
+def _sold_mask_from(bgr) -> np.ndarray:
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    m = cv2.inRange(hsv, np.array([18, 90, 120], np.uint8),
+                    np.array([42, 255, 255], np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+    m = cv2.dilate(m, np.ones((5, 5), np.uint8))
+    return m
 
 
-def _lime_mask(hsv: np.ndarray) -> np.ndarray:
-    return cv2.inRange(
-        hsv,
-        np.array([_SOLD_H_LO, _SOLD_S_THRESH, _SOLD_V_THRESH], np.uint8),
-        np.array([_SOLD_H_HI, 255, 255], np.uint8))
-
-
-def is_card_sold(scene_bgr, region=SOLD_STAMP_REGION) -> bool:
+def _sold_score(scene_gray, region) -> float:
+    if _SOLD_TEMPLATE is None:
+        return 0.0
     x1, y1, x2, y2 = region
-    crop = scene_bgr[y1:y2, x1:x2]
+    h, w = scene_gray.shape[:2]
+    crop = scene_gray[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+    th, tw = _SOLD_TEMPLATE.shape[:2]
+    if crop.shape[0] < th or crop.shape[1] < tw:
+        return 0.0
+    res = cv2.matchTemplate(crop, _SOLD_TEMPLATE, cv2.TM_CCOEFF_NORMED,
+                            mask=_SOLD_MASK)
+    res = np.nan_to_num(res, nan=0.0, posinf=0.0, neginf=0.0)
+    return float(cv2.minMaxLoc(res)[1])
+
+
+def is_card_sold(scene_bgr, threshold=_SOLD_MATCH_DEFAULT,
+                 region=SOLD_STAMP_REGION) -> bool:
+    return _sold_score(_gray(scene_bgr), region) >= threshold
+
+
+def sold_slots(scene_bgr, threshold=_SOLD_MATCH_DEFAULT) -> tuple:
+    gray = _gray(scene_bgr)
+    return tuple(_sold_score(gray, r) >= threshold for r in SOLD_STAMP_REGIONS)
+
+
+CARD_PANEL_REGIONS = (
+    (320, 175, 900, 345),
+    (320, 377, 900, 547),
+    (320, 579, 900, 749),
+    (320, 781, 900, 951),
+)
+_CARD_PRESENT_MIN = 150.0
+
+
+def _card_present(scene_gray, region) -> bool:
+    x1, y1, x2, y2 = region
+    h, w = scene_gray.shape[:2]
+    crop = scene_gray[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
     if crop.size == 0:
         return False
-    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    return int(cv2.countNonZero(_lime_mask(hsv))) > _SOLD_PIXEL_COUNT
+    return float(crop.mean()) >= _CARD_PRESENT_MIN
 
 
-def sold_slots(scene_bgr) -> tuple:
-    sx1, sy1, sx2, sy2 = _SOLD_STRIP
-    h, w = scene_bgr.shape[:2]
-    strip = scene_bgr[max(0, sy1):min(h, sy2), max(0, sx1):min(w, sx2)]
-    if strip.size == 0:
-        return (False, False, False, False)
-    mask = _lime_mask(cv2.cvtColor(strip, cv2.COLOR_BGR2HSV))
+def first_buyable_slot(scene_bgr, threshold=_SOLD_MATCH_DEFAULT) -> int:
+    gray = _gray(scene_bgr)
+    for i, (panel, sold_region) in enumerate(
+            zip(CARD_PANEL_REGIONS, SOLD_STAMP_REGIONS), start=1):
+        if not _card_present(gray, panel):
+            break
+        if _sold_score(gray, sold_region) < threshold:
+            return i
+    return 0
+
+
+# ── Diagnostica soglie (DA DISATTIVARE PER LA RELEASE) ────────────────────────
+def _card_panel_means(scene_gray) -> tuple:
+    h, w = scene_gray.shape[:2]
     out = []
-    for (x1, y1, x2, y2) in SOLD_STAMP_REGIONS:
-        sub = mask[y1 - sy1:y2 - sy1, x1 - sx1:x2 - sx1]
-        out.append(int(cv2.countNonZero(sub)) > _SOLD_PIXEL_COUNT)
+    for x1, y1, x2, y2 in CARD_PANEL_REGIONS:
+        crop = scene_gray[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+        out.append(float(crop.mean()) if crop.size else 0.0)
     return tuple(out)
 
 
-def first_buyable_slot(scene_bgr) -> int:
-    for i, sold in enumerate(sold_slots(scene_bgr), start=1):
-        if not sold:
-            return i
-    return 0
+def log_match_diagnostics(scene_bgr, templates: dict, cfg) -> None:
+    thresholds = thresholds_from_config(cfg)
+
+    scores = screen_scores(scene_bgr, templates, targets=None)
+    by_screen: dict[Screen, float] = {}
+    for name, sc in scores.items():
+        scr = TEMPLATE_SCREENS[name]
+        if sc > by_screen.get(scr, -1.0):
+            by_screen[scr] = sc
+
+    parts = []
+    for scr, _key in SCREEN_THRESHOLD_KEYS.items():
+        sc = by_screen.get(scr, 0.0)
+        thr = thresholds.get(scr, DEFAULT_MATCH_THRESHOLD)
+        flag = "*" if sc >= thr else " "
+        parts.append(f"{scr.name}:{sc:.3f}/{thr:.2f}{flag}")
+    _diag.info("match | %s", "  ".join(parts))
+
+    gray = _gray(scene_bgr)
+    sold_thr = getattr(cfg, "match_threshold_sold", _SOLD_MATCH_DEFAULT)
+    sold = tuple(_sold_score(gray, r) for r in SOLD_STAMP_REGIONS)
+    bright = _card_panel_means(gray)
+    sold_str = "  ".join(
+        f"slot{i}:{s:.3f}{'*' if s >= sold_thr else ' '}"
+        for i, s in enumerate(sold, 1))
+    bright_str = " ".join(f"{b:.0f}" for b in bright)
+    _diag.info("sold (thr %.2f) | %s | card_bright[min %.0f] %s",
+               sold_thr, sold_str, _CARD_PRESENT_MIN, bright_str)

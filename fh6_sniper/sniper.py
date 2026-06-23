@@ -22,10 +22,16 @@ class GameIO:
         self._memo: dict = {}
 
     def _read(self, key, fn):
-        frame, fid = capture.latest_frame(self.cfg.window_title)
+        frame, fid = capture.latest_frame()
         if fid != self._memo_fid:
             self._memo_fid = fid
             self._memo = {}
+            if fid and getattr(self.cfg, "match_score_logging", False):
+                try:
+                    vision.log_match_diagnostics(
+                        frame, self.templates, self.cfg)
+                except Exception:
+                    log.exception("match diagnostics failed")
         if key not in self._memo:
             self._memo[key] = fn(frame)
         return self._memo[key]
@@ -44,26 +50,32 @@ class GameIO:
                 and self._last_screen != Screen.UNKNOWN):
             targets = targets | {self._last_screen}
         key = ("screen", frozenset(targets) if targets is not None else None)
+        thresholds = vision.thresholds_from_config(self.cfg)
+        fallback = getattr(self.cfg, "match_threshold",
+                           vision.DEFAULT_MATCH_THRESHOLD)
         result = self._read(
             key,
             lambda f: vision.identify_screen(
-                f, self.templates, self.cfg.match_threshold, targets=targets))
+                f, self.templates, fallback,
+                targets=targets, thresholds=thresholds))
         if result != self._last_screen:
             log.info("screen -> %s", result.name)
             self._last_screen = result
         return result
 
     def focused(self) -> bool:
-        return capture.is_game_focused(self.cfg.window_title)
+        return capture.is_game_focused()
 
     def confirm_highlighted(self) -> bool:
         return self._read("confirm", vision.is_confirm_highlighted)
 
     def card_sold(self) -> bool:
-        return self._read("card_sold", vision.is_card_sold)
+        th = getattr(self.cfg, "match_threshold_sold", 0.70)
+        return self._read("card_sold", lambda f: vision.is_card_sold(f, th))
 
     def first_buyable_slot(self) -> int:
-        return self._read("slot", vision.first_buyable_slot)
+        th = getattr(self.cfg, "match_threshold_sold", 0.70)
+        return self._read("slot", lambda f: vision.first_buyable_slot(f, th))
 
     def press(self, name: str, times: int = 1) -> None:
         log.info("press %s%s", name, f" x{times}" if times > 1 else "")
@@ -94,10 +106,11 @@ class Sniper:
     def request_stop(self) -> None:
         self._stop = True
 
-    def _status(self, text: str) -> None:
-        log.info("[status] %s", text)
+    def _status(self, msg: str, **kwargs) -> None:
+        shown = msg.format(**kwargs) if kwargs else msg
+        log.info("[status] %s", shown)
         if self.on_status:
-            self.on_status(text)
+            self.on_status(msg, kwargs)
 
     def _emit_stats(self) -> None:
         if self.on_stats:
@@ -228,7 +241,7 @@ class Sniper:
         direction = "right" if self._jitter_up else "left"
         sign = "+" if self._jitter_up else "-"
         try:
-            self._status(f"Updating bid ({sign}{steps})")
+            self._status("Updating bid ({sign}{steps})", sign=sign, steps=steps)
             for _ in range(rows):
                 if self._stop:
                     return
@@ -492,7 +505,7 @@ class Sniper:
             if outcome == "bought":
                 self.cars_bought += 1
                 loop_s = self.clock() - t0
-                self._status(f"Bought {self.cars_bought} car(s)")
+                self._status("Bought {n} car(s)", n=self.cars_bought)
                 if self.on_purchase:
                     self.on_purchase(loop_s, self.cars_bought)
             self._emit_stats()

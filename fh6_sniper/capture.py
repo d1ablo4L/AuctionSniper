@@ -10,17 +10,35 @@ import win32gui
 
 _log = logging.getLogger("fh6.capture")
 
+GAME_WINDOW_TITLE = "Forza Horizon 6"
+
 # ── DPI awareness ────────────────────────────────────────────────────────────
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
+def _set_dpi_awareness():
+    try:
+        u = ctypes.windll.user32
+        u.SetProcessDpiAwarenessContext.restype = ctypes.c_bool
+        u.SetProcessDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+        if u.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4)):
+            return
+    except Exception:
+        pass
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        return
+    except Exception:
+        pass
     try:
         ctypes.windll.user32.SetProcessDPIAware()
     except Exception:
         pass
 
+
+_set_dpi_awareness()
+
 CANON = (1920, 1080)
 _TARGET_RATIO = 16.0 / 9.0
+
+_CAPTURE_FPS_CAP = 60
 
 # ── Module state ──────────────────────────────────────────────────────────────
 _camera = None
@@ -165,7 +183,9 @@ def _worker_alive() -> bool:
 
 def _worker_run(window_title):
     _log.info("capture worker started")
+    min_dt = 1.0 / _CAPTURE_FPS_CAP if _CAPTURE_FPS_CAP else 0.0
     while not _stop_worker:
+        t0 = time.perf_counter()
         try:
             produced = _produce_frame(window_title)
         except Exception:
@@ -174,10 +194,15 @@ def _worker_run(window_title):
             continue
         if not produced:
             time.sleep(0.003)
+            continue
+        if min_dt:
+            rest = min_dt - (time.perf_counter() - t0)
+            if rest > 0:
+                time.sleep(rest)
     _log.info("capture worker stopped")
 
 
-def start_capture(window_title: str) -> None:
+def start_capture(window_title: str = GAME_WINDOW_TITLE) -> None:
     global _worker_thread, _stop_worker
     if _worker_alive():
         return
@@ -199,7 +224,7 @@ def frame_id() -> int:
     return snap[1] if snap is not None else 0
 
 
-def latest_frame(window_title: str | None = None):
+def latest_frame(window_title: str | None = GAME_WINDOW_TITLE):
     if window_title and not _worker_alive():
         start_capture(window_title)
 
@@ -219,7 +244,7 @@ def latest_frame(window_title: str | None = None):
     return (np.zeros((CANON[1], CANON[0], 3), dtype=np.uint8), 0)
 
 
-def grab_screen(window_title: str | None = None) -> np.ndarray:
+def grab_screen(window_title: str | None = GAME_WINDOW_TITLE) -> np.ndarray:
     return latest_frame(window_title)[0]
 
 
@@ -228,11 +253,12 @@ def foreground_title() -> str:
     return win32gui.GetWindowText(win32gui.GetForegroundWindow())
 
 
-def is_game_focused(expected_title: str, title_getter=foreground_title) -> bool:
+def is_game_focused(expected_title: str = GAME_WINDOW_TITLE,
+                    title_getter=foreground_title) -> bool:
     return title_getter().strip() == expected_title
 
 
-def focus_window(title: str) -> bool:
+def focus_window(title: str = GAME_WINDOW_TITLE) -> bool:
     hwnd = find_window(title)
     if not hwnd:
         return False
