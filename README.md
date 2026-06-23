@@ -63,9 +63,9 @@ Monitors the Auction House for the car you set, buys it instantly as soon as it 
 - Moving background (Visual accessibility) **Off**
 - Wired Ethernet connection strongly recommended
 
-<img width="1386" height="763" alt="image-4" src="https://github.com/user-attachments/assets/fd2bf173-259f-4458-938b-2267144ce3ab" />
-<img width="1386" height="758" alt="image-5" src="https://github.com/user-attachments/assets/34f3fe88-9575-4ec5-aa6c-0c9e04a9964c" />
-<img width="1779" height="779" alt="20260623204520_1" src="https://github.com/user-attachments/assets/bd909d01-ffb3-4cee-9f21-c0a3ddc208da" />
+<img width="1372" height="767" alt="20260623205539_1" src="https://github.com/user-attachments/assets/195fbb4c-79bc-4944-8405-00a35d4127e8" />
+<img width="1367" height="760" alt="20260623205549_1" src="https://github.com/user-attachments/assets/f6bd8f5e-8122-4190-954d-9581dd5c31cc" />
+<img width="1369" height="759" alt="20260623205555_1" src="https://github.com/user-attachments/assets/d15b2066-a9af-40b3-b8ab-4faf73f69bc4" />
 
 
 ---
