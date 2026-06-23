@@ -1,27 +1,31 @@
-# AuctionSniper - V.2.0.0
+# 𖦏 AuctionSniper - V.2.1
 
-> **Note:** This is an updated version of CecchinoDelleAste, adapted to work with the English version of the game. It is completely unrelated to Frosty's paid V2.
+> **Note:** This is an updated and improved version of Frosty's FH6 Auction Sniper. It is completely unrelated to Frosty's paid V2.
 
+---
 
-## 🚀 Changelog V.2:
-* **New Features:** Added *Auto-Refresh*, *Max Bid*, and *Max Buyout* functions to maximize car discovery and avoid already-ended auctions.
-* **Performance:** Optimized overall performance; the tool is out-of-the-box significantly faster and more responsive than the previous version.
-* **Code & Customization:** Deep code cleanup and removal of hardcoded limits. You can now customize every parameter 100% to match your PC's hardware and network speed.
-* **User Interface (UI):** Rebuilt from scratch to offer a more detailed and comprehensive experience compared to V.1.
-* **Bugfixes:** Applied various structural improvements and resolved minor bugs.
+## 📣 Changelog V.2.1
 
-## Main changes
-* **Added multi-resolution support.** (tested and working: 720p, 1080p, 2K and 4K)
-* **Added HDR support.**
-* **Added support for the Italian language in the game.**
-* **Added a Settings page in the overlay.**
-* **Full translation of the tool into Italian.**
-* **Custom user interface.**
-* **Clean, simplified code for better optimization and maintenance.**
-* **Fixed minor bugs.**
+### 🔄 New Features
+* Added **Auto Refresh**, **Max Bid**, and **Max Buyout** to find more cars and prevent appears already ended auctions.
+* Added a **Diagnostic Mode** for matches to avoid blindly modifying thresholds when using different settings (like HDR or custom templates).
+* Embedded templates and new overlay fonts directly into the executable.
 
-## Future changes
-* Add support for custom resolutions and non-standard aspect ratios
+### 🖥️ UI & Multi-Language Support
+* Rebuilt the interface from scratch to offer a much more detailed, intuitive, and comprehensive experience.
+* Added a **Customization Page** in the settings: you can now change the overlay language, select your in-game language, live resize the overlay, and change colors.
+* Four languages currently available: **English, Italian, Spanish and German**.
+
+### ⚡ Performance & Detection
+* Optimized overall performance; the tool is now significantly faster compared to V1.
+* Improved **"SOLD" stamp detection**: the tool will now successfully skip already sold cars without attempting to buy them.
+
+### ⚙️ Total Customization
+* Extensive code cleanup and removal of hardcoded limits. Every single parameter is now 100% customizable to perfectly match your PC's hardware and network latency.
+* Reworked and improved the **Keybinds** functionality.
+
+### 🛠️ Fixes & Improvements
+* Various code improvements and general bug fixes.
 
 ---
 
@@ -31,17 +35,19 @@
 
 Monitors the Auction House for the car you set, buys it instantly as soon as it appears, collects it and starts over in a loop. Configure the filters once and let it run. This tool has an instant-buy rate of around 10% and usually manages a snipe in under 5 minutes.
 
-<img width="1655" height="792" alt="image-3" src="https://github.com/user-attachments/assets/61b58048-c3e6-4156-9510-0c2600aa7e9f" />
-
 ---
 
 # Features
 
 - Automatic search and instant buyout
-- Skips already-sold listings to find a new one
+- **Auto Refresh**, **Max Bid**, and **Max Buyout** controls to find more cars and avoid already-ended auctions
+- Improved **"SOLD" stamp detection** to skip already-sold listings and find a new one
+- **Diagnostic Mode** to fine-tune match thresholds for HDR or custom templates
 - Automatically collects every car won
 - Small always-on-top overlay with real-time stats
-- F8 start/stop, F9 emergency stop
+- **Customization Page**: overlay language, in-game language, live overlay resize, and custom colors
+- Multi-language: **English, Italian, Spanish and German**
+- F8 start/stop, F9 emergency stop, reworked keybinds
 - Auto-stop after a set number of cars or minutes
 - Smart page recognition to avoid accidental clicks on other screens
 
@@ -49,12 +55,12 @@ Monitors the Auction House for the car you set, buys it instantly as soon as it 
 
 # Requirements and settings
 
-- Windows 10 or 11
-- Forza Horizon 6 on PC
-- Resolution 4k/2k/1080p/720p - Fullscreen, unlocked frame rate - HUD size 100%
-- Graphics preset Very Low
-- Animated background (Visual accessibility) **Off**
-- Game language set to **English**
+- Windows **10 or 11**
+- Resolution **4k/2k/1080p/720p**
+- Frame rate **Unlocked**
+- UI size **100%**
+- Graphics preset **Very Low**
+- Moving background (Visual accessibility) **Off**
 - Wired Ethernet connection strongly recommended
 
 <img width="1386" height="763" alt="image-4" src="https://github.com/user-attachments/assets/fd2bf173-259f-4458-938b-2267144ce3ab" />
@@ -68,7 +74,7 @@ Download the latest version of **AuctionSniper.zip** from the [Releases page](ht
 
 ---
 
-# Setup
+# How to use
 
 ## Step 1 – Open the Auction House
 
@@ -85,7 +91,7 @@ Open **Search Auctions** and set the filters:
 - **Make** and **Model** of the car you want
 - **Maximum buyout price** as a safety limit. The bot buys the first matching car without checking the price, so this is the most you can spend per car. Set it carefully.
 
-Go back so the screen shows the **search configuration view**. That's where the bot expects to start.
+Go back so the screen shows the main **Auction House Screen**. That's where the bot expects to start.
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/7fac68c0-f89d-45ee-a10a-5133b02da681" />
 
@@ -93,13 +99,13 @@ Go back so the screen shows the **search configuration view**. That's where the 
 
 ## Step 3 – Start the sniper
 
-Double-click **CecchinoDelleAste.exe**. A small overlay will appear in the top-right corner of the screen.
+Right-click **AuctionSniper.exe** and **run as administrator**. A small overlay will appear in the top-right corner of the screen.
 
 Go back to FH6, press **F8** or **Start**, and let it run.
 
 To stop: press **F8** again, **F9** for emergency stop, or click **STOP** on the overlay.
 
-<img width="1902" height="1062" alt="image-2" src="https://github.com/user-attachments/assets/ccdfba46-4c90-42de-bb79-fe26658bb262" />
+<img width="1916" height="971" alt="image-1" src="https://github.com/user-attachments/assets/2e4c412e-974e-4bf4-9d4d-bbc31fcd2432" />
 
 ---
 
@@ -147,8 +153,8 @@ Windows SmartScreen will show a warning because the exe is not digitally signed.
 
 **The overlay shows "Paused"** – FH6 is not the active window. Click the game.
 
-**F8 does nothing** – another app on your PC may be intercepting the F8 key. Close it, or change the hotkey in `config.json`.
+**F8 does nothing** – another app on your PC may be intercepting the F8 key. Close it, or change the hotkey in the settings.
 
-**The bot gets lost on a screen and freezes** – restart FH6 and the bot. Make sure the graphics preset is **Very Low** and the resolution is **1920 x 1080**.
+**The bot gets lost on a screen and freezes** – restart FH6 and the bot. Make sure the graphics preset is **Very Low** and the resolution matches one of the supported options. Use **Diagnostic Mode** to check match thresholds if you run HDR or custom templates.
 
-**When reporting bot-related issues** – include the Sniper.log file so I can analyze it. If the problem persists, [open an issue](https://github.com/d1ablo4L/CecchinoDelleAste/issues) or contact me on Discord "d1ablo4l".
+**When reporting bot-related issues** – include the Sniper.log file so I can analyze it. If the problem persists, [open an issue](https://github.com/d1ablo4L/AuctionSniper/issues) or contact me on Discord "d1ablo4l".
